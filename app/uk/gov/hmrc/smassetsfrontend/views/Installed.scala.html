@@ -1,0 +1,50 @@
+@*
+ * Copyright 2022 HM Revenue & Customs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *@
+
+@import uk.gov.hmrc.smassetsfrontend.config.AppConfig
+@import java.io.File
+
+@(config: AppConfig, filenames: Seq[File], failedDownloads: Map[String, String])
+
+<h1>Service Manager Assets Frontend Admin</h1>
+<div>
+    <h2>Config</h2>
+    <pre>
+        artifactory.url  @config.artifactoryUrl
+        artifactory.path @config.artifactoryPath
+        workDir          @config.workDir  (default $WORKSPACE)
+    </pre>
+</div>
+
+<div>
+    <h2>Installed Asset Packages</h2>
+    <em>Installed into @config.cacheDir</em>
+    <ul>
+        @filenames.map {file => <li>@file.getName <em>@file.length()</em></li> }
+    </ul>
+</div>
+
+<div>
+    <h2>Failed Downloads</h2>
+    <table>
+        @failedDownloads.toSeq.map { case (url, error) =>
+            <tr>
+                <td><pre>@url</pre></td>
+                <td><pre>@error</pre></td>
+            </tr>
+        }
+    </table>
+</div>
