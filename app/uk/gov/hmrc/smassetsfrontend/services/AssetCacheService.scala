@@ -34,17 +34,44 @@ class AssetCacheService @Inject()(client: WSClient, config: AppConfig, cache: As
   private val logger = Logger(this.getClass)
   private val failedDownloads = mutable.Map[String, String]()
 
-  def getAsset(version:String): Future[Option[ZipFile]] = cache.getOrElseUpdate(version)(downloadIfMissing(version))
+  def getAsset(version:String): Future[Option[ZipFile]] = cache.getOrElseUpdate(version)(populateCache(version))
+
+  private def populateCache(version: String) : Future[Option[ZipFile]] =
+    if(config.offline)
+      useOfflineCache(version)
+    else
+      downloadIfMissing(version)
+
+  private def useOfflineCache(version: String): Future[Option[ZipFile]] = {
+    val assetFile = config.cacheDir.resolve(s"assets-frontend-$version.zip").toFile
+    if (assetFile.exists())
+      Future.successful(Some(assetFile).map(f => new ZipFile(f)))
+    else
+      Future.successful(None)
+  }
 
 
-  def downloadIfMissing( version: String): Future[Option[ZipFile]] = {
-    val maybeFile = config.cacheDir.resolve(s"assets-frontend-$version.zip").toFile
-    if(maybeFile.exists()) {
-      Future.successful(Option(new ZipFile(maybeFile)))
+  private def downloadIfMissing(version: String): Future[Option[ZipFile]] = {
+    val assetFile = config.cacheDir.resolve(s"assets-frontend-$version.zip").toFile
+    if(assetFile.exists()) {
+      for {
+        isValid <- validateDownload(version, assetFile)
+        zf      <- if(isValid.isEmpty) download(version, assetFile) else Future.successful(isValid.map(f => new ZipFile(f)))
+      } yield zf
     } else {
       logger.info(s"version $version not found locally, downloading")
-      download(version, maybeFile).recover { case _:Exception => None }
+      download(version, assetFile).recover { case _:Exception => None }
     }
+  }
+
+  private def validateDownload(version:String, file:File): Future[Option[File]] ={
+    val url = s"https://${config.artifactoryUrl}${config.artifactoryPath}$version/assets-frontend-$version.zip"
+    for {
+      resp      <- client.url(url).head()
+      valid      = resp.header("X-Checksum-Sha1").filter(sha1 => Hashing.validateFileSha1(sha1, file))
+      validFile  = valid.map(_ => file)
+    } yield validFile
+
   }
 
   private def download(version: String,  outputFile: File): Future[Option[ZipFile]] = {
@@ -59,9 +86,13 @@ class AssetCacheService @Inject()(client: WSClient, config: AppConfig, cache: As
       resp   <- client.url(url).withMethod("GET").stream()
       _       = logger.info(s"downloading $url")
       result <- if(resp.status == 200)
-                  resp.bodyAsSource.runWith(FileIO.toPath(outputFile.toPath)).map(_ => Some(new ZipFile(outputFile)))
+                  resp
+                    .bodyAsSource
+                    .runWith(FileIO.toPath(outputFile.toPath))
+                    .map(_ => Some(new ZipFile(outputFile)))
                 else {
                   logger.info(s"failed to download $url - ${resp.status}")
+                  outputFile.delete()
                   failedDownloads.put(url, s"${resp.status} ${resp.statusText}")
                   Future.successful(None)
                 }
@@ -75,13 +106,13 @@ class AssetCacheService @Inject()(client: WSClient, config: AppConfig, cache: As
       .cacheDir
       .toFile
       .listFiles(new FilenameFilter {override def accept(file: File, name: String): Boolean = name.startsWith("assets-frontend-") && name.endsWith(".zip")}).toSeq
-      .filter(_.isDirectory==false)
+      .filter(_.isFile)
 
-  def uninstall(): Unit = {
+  def uninstall(): Unit =
     listAvailable()
       .foreach(file => {
         logger.info(s"Deleting ${file.getPath}")
         file.delete()
       })
-  }
 }
+

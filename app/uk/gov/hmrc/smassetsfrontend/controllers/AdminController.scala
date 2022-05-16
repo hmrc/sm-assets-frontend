@@ -31,7 +31,6 @@ class AdminController @Inject() (
   mcc: MessagesControllerComponents
 )(implicit ec: ExecutionContext) extends FrontendController(mcc){
 
-
   def installed(): Action[AnyContent] = Action { _ =>
     val available = assetCacheService.listAvailable()
     val failed    = assetCacheService.listFailed()
