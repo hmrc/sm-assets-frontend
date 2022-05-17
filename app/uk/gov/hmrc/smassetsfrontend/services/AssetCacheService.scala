@@ -24,6 +24,7 @@ import play.api.libs.ws.WSClient
 import uk.gov.hmrc.smassetsfrontend.config.AppConfig
 
 import java.io.{File, FilenameFilter}
+import java.nio.file.{Files, StandardCopyOption}
 import java.util.zip.ZipFile
 import javax.inject.Inject
 import scala.collection.mutable
@@ -34,54 +35,33 @@ class AssetCacheService @Inject()(client: WSClient, config: AppConfig, cache: As
   private val logger = Logger(this.getClass)
   private val failedDownloads = mutable.Map[String, String]()
 
-  def getAsset(version:String): Future[Option[ZipFile]] = cache.getOrElseUpdate(version)(populateCache(version))
-
-  private def populateCache(version: String) : Future[Option[ZipFile]] =
-    if(config.offline)
-      useOfflineCache(version)
-    else
-      downloadIfMissing(version)
-
-  private def useOfflineCache(version: String): Future[Option[ZipFile]] = {
-    val assetFile = config.cacheDir.resolve(s"assets-frontend-$version.zip").toFile
-    if (assetFile.exists())
-      Future.successful(Some(assetFile).map(f => new ZipFile(f)))
-    else
-      Future.successful(None)
-  }
-
+  def getAsset(version:String): Future[Option[ZipFile]] = cache.getOrElseUpdate(version)(downloadIfMissing(version))
 
   private def downloadIfMissing(version: String): Future[Option[ZipFile]] = {
     val assetFile = config.cacheDir.resolve(s"assets-frontend-$version.zip").toFile
+
     if(assetFile.exists()) {
-      for {
-        isValid <- validateDownload(version, assetFile)
-        zf      <- if(isValid.isEmpty) download(version, assetFile) else Future.successful(isValid.map(f => new ZipFile(f)))
-      } yield zf
+        Future.successful(Some(new ZipFile(assetFile)))
     } else {
       logger.info(s"version $version not found locally, downloading")
-      download(version, assetFile).recover { case _:Exception => None }
+      val tmpFile = File.createTempFile("assets-frontend", "zip")
+
+      for {
+        downloadedFile <- download(version, tmpFile).recover { case _:Exception => None }
+        outFile         = downloadedFile.map(file => Files.move(file.toPath, assetFile.toPath, StandardCopyOption.REPLACE_EXISTING).toFile)
+        zipFile         = outFile.map(f => new ZipFile(f))
+      } yield zipFile
+
     }
   }
 
-  private def validateDownload(version:String, file:File): Future[Option[File]] ={
-    val url = s"https://${config.artifactoryUrl}${config.artifactoryPath}$version/assets-frontend-$version.zip"
-    for {
-      resp      <- client.url(url).head()
-      valid      = resp.header("X-Checksum-Sha1").filter(sha1 => Hashing.validateFileSha1(sha1, file))
-      validFile  = valid.map(_ => file)
-    } yield validFile
-
-  }
-
-  private def download(version: String,  outputFile: File): Future[Option[ZipFile]] = {
+  private def download(version: String, outputFile: File): Future[Option[File]] = {
 
     val url = s"https://${config.artifactoryUrl}${config.artifactoryPath}$version/assets-frontend-$version.zip"
 
     // abort early if we've already tried the url and it didnt work
-    if(failedDownloads.contains(url)) {
-      return Future.successful(None)
-    }
+    if(failedDownloads.contains(url)) return Future.successful(None)
+
     for {
       resp   <- client.url(url).withMethod("GET").stream()
       _       = logger.info(s"downloading $url")
@@ -89,11 +69,12 @@ class AssetCacheService @Inject()(client: WSClient, config: AppConfig, cache: As
                   resp
                     .bodyAsSource
                     .runWith(FileIO.toPath(outputFile.toPath))
-                    .map(_ => Some(new ZipFile(outputFile)))
+                    // only return file if sha1 is valid
+                    .map(_ => resp.header("X-Checksum-Sha1")
+                                  .filter(sha1 => Hashing.validateFileSha1(sha1, outputFile))
+                                  .map(_       => outputFile))
                 else {
                   logger.info(s"failed to download $url - ${resp.status}")
-                  outputFile.delete()
-                  failedDownloads.put(url, s"${resp.status} ${resp.statusText}")
                   Future.successful(None)
                 }
     } yield result
@@ -108,11 +89,15 @@ class AssetCacheService @Inject()(client: WSClient, config: AppConfig, cache: As
       .listFiles(new FilenameFilter {override def accept(file: File, name: String): Boolean = name.startsWith("assets-frontend-") && name.endsWith(".zip")}).toSeq
       .filter(_.isFile)
 
-  def uninstall(): Unit =
+  def uninstall(): Future[Unit] = {
+    cache.removeAll().map(_ =>
     listAvailable()
       .foreach(file => {
         logger.info(s"Deleting ${file.getPath}")
         file.delete()
       })
+    )
+  }
+
 }
 

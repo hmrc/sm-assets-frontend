@@ -37,8 +37,7 @@ class AdminController @Inject() (
     Ok(Installed(config, available, failed))
   }
 
-  def uninstall(): Action[AnyContent] = Action { _ =>  {
-    assetCacheService.uninstall()
-    Ok("cache cleared")
+  def uninstall(): Action[AnyContent] = Action.async { implicit request =>  {
+    assetCacheService.uninstall().map(_ => Ok("Cache Cleared"))
   }}
 }
