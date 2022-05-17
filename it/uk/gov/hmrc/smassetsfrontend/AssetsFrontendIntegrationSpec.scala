@@ -14,23 +14,11 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.smassetsfrontend.config
+package uk.gov.hmrc.smassetsfrontend
 
-import javax.inject.{Inject, Singleton}
-import play.api.Configuration
+import org.scalatest.flatspec.AnyFlatSpec
 
-import java.nio.file.{Path, Paths}
+class AssetsFrontendIntegrationSpec extends AnyFlatSpec {
 
-@Singleton
-class AppConfig @Inject()(config: Configuration) {
-
-  val artifactoryUrl: String  = config.get[String]("artifactory.url")
-  val artifactoryPath: String = config.get[String]("artifactory.path")
-  val workDir: String         = config.get[String]("workdir")
-
-  val cacheDir: Path = Paths.get(workDir, "assets-cache")
-  if(!cacheDir.toFile.exists()) {
-    cacheDir.toFile.mkdir()
-  }
 
 }

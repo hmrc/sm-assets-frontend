@@ -1,5 +1,9 @@
 # Add all the application routes to the app.routes file
-->         /sm-assets-frontend              app.Routes
+GET        /assets/:version/*fileName uk.gov.hmrc.smassetsfrontend.controllers.AssetsController.assets(version, fileName)
+
+GET        /admin/installed           uk.gov.hmrc.smassetsfrontend.controllers.AdminController.installed()
+DELETE     /admin/installed           uk.gov.hmrc.smassetsfrontend.controllers.AdminController.uninstall()
+
 ->         /                          health.Routes
 
 GET        /admin/metrics             com.kenshoo.play.metrics.MetricsController.metrics

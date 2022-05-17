@@ -14,23 +14,24 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.smassetsfrontend.config
+package uk.gov.hmrc.smassetsfrontend.services
 
-import javax.inject.{Inject, Singleton}
-import play.api.Configuration
+import java.io.{File, FileInputStream}
+import java.security.{DigestInputStream, MessageDigest}
 
-import java.nio.file.{Path, Paths}
+object Hashing {
 
-@Singleton
-class AppConfig @Inject()(config: Configuration) {
+  def validateFileSha1(sha1Sum: String, file: File): Boolean = {
+    val digest = MessageDigest.getInstance("SHA-1")
+    val fis = new FileInputStream(file)
+    val dis = new DigestInputStream(fis, digest)
 
-  val artifactoryUrl: String  = config.get[String]("artifactory.url")
-  val artifactoryPath: String = config.get[String]("artifactory.path")
-  val workDir: String         = config.get[String]("workdir")
-
-  val cacheDir: Path = Paths.get(workDir, "assets-cache")
-  if(!cacheDir.toFile.exists()) {
-    cacheDir.toFile.mkdir()
+    val buffer = new Array[Byte](4096)
+    while(dis.available() > 0){
+      dis.read(buffer)
+    }
+    val fileSha1 = digest.digest.map(b => String.format("%02x", Byte.box(b))).mkString
+    sha1Sum.equalsIgnoreCase(fileSha1)
   }
 
 }
