@@ -16,6 +16,7 @@ Unlike the original assets-frontend which would download every version on the of
 ## API
 GET `/assets/:version/:path/:to/:file` downloads requested version of assets-frontend and serves static content
 
+## Admin Frontend
 GET `/admin/installed` admin page listing installed versions
 DELETE `/admin/installed` removes all installed versions
 
