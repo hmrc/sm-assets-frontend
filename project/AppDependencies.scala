@@ -4,15 +4,15 @@ import sbt.Keys.libraryDependencies
 import sbt._
 
 object AppDependencies {
+  val bootstrapPlayVersion = "7.19.0"
 
   val compile = Seq(
     caffeine,
-    "uk.gov.hmrc"             %% "bootstrap-frontend-play-28" % "5.24.0",
-    "uk.gov.hmrc"             %% "play-frontend-hmrc"         % "3.15.0-play-28"
+    "uk.gov.hmrc" %% "bootstrap-frontend-play-28" % bootstrapPlayVersion,
+    "uk.gov.hmrc" %% "play-frontend-hmrc"         % "7.14.0-play-28"
   )
 
   val test = Seq(
-    "uk.gov.hmrc"             %% "bootstrap-test-play-28"     % "5.24.0"             % "test, it",
-    "com.vladsch.flexmark"    %  "flexmark-all"               % "0.36.8"            % "test, it"
+    "uk.gov.hmrc" %% "bootstrap-test-play-28"     % bootstrapPlayVersion % "test, it"
   )
 }

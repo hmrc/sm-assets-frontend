@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 HM Revenue & Customs
+ * Copyright 2023 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,73 +31,80 @@ import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
 
 
-class AssetCacheService @Inject()(client: WSClient, config: AppConfig, cache: AsyncCacheApi)(implicit ec: ExecutionContext, mat: Materializer) {
+class AssetCacheService @Inject()(
+  client: WSClient,
+  config: AppConfig,
+  cache : AsyncCacheApi
+)(implicit
+  ec    : ExecutionContext,
+  mat   : Materializer
+) {
   private val logger = Logger(this.getClass)
+
   private val failedDownloads = mutable.Map[String, String]()
 
-  def getAsset(version:String): Future[Option[ZipFile]] = cache.getOrElseUpdate(version)(downloadIfMissing(version))
+  def getAsset(version:String): Future[Option[ZipFile]] =
+    cache.getOrElseUpdate(version)(downloadIfMissing(version))
 
   private def downloadIfMissing(version: String): Future[Option[ZipFile]] = {
     val assetFile = config.cacheDir.resolve(s"assets-frontend-$version.zip").toFile
 
-    if(assetFile.exists()) {
-        Future.successful(Some(new ZipFile(assetFile)))
-    } else {
+    if (assetFile.exists())
+      Future.successful(Some(new ZipFile(assetFile)))
+    else {
       logger.info(s"version $version not found locally, downloading")
       val tmpFile = File.createTempFile("assets-frontend", "zip")
 
       for {
-        downloadedFile <- download(version, tmpFile).recover { case _:Exception => None }
-        outFile         = downloadedFile.map(file => Files.move(file.toPath, assetFile.toPath, StandardCopyOption.REPLACE_EXISTING).toFile)
-        zipFile         = outFile.map(f => new ZipFile(f))
+        downloadedFile <- download(version, tmpFile).recover { case _: Exception => None }
+        outFile        =  downloadedFile.map(file => Files.move(file.toPath, assetFile.toPath, StandardCopyOption.REPLACE_EXISTING).toFile)
+        zipFile        =  outFile.map(new ZipFile(_))
       } yield zipFile
-
     }
   }
 
   private def download(version: String, outputFile: File): Future[Option[File]] = {
-
     val url = s"https://${config.artifactoryUrl}${config.artifactoryPath}$version/assets-frontend-$version.zip"
 
     // abort early if we've already tried the url and it didnt work
-    if(failedDownloads.contains(url)) return Future.successful(None)
-
-    for {
-      resp   <- client.url(url).withMethod("GET").stream()
-      _       = logger.info(s"downloading $url")
-      result <- if(resp.status == 200)
-                  resp
-                    .bodyAsSource
-                    .runWith(FileIO.toPath(outputFile.toPath))
-                    // only return file if sha1 is valid
-                    .map(_ => resp.header("X-Checksum-Sha1")
-                                  .filter(sha1 => Hashing.validateFileSha1(sha1, outputFile))
-                                  .map(_       => outputFile))
-                else {
-                  logger.info(s"failed to download $url - ${resp.status}")
-                  Future.successful(None)
-                }
-    } yield result
+    if (failedDownloads.contains(url))
+      Future.successful(None)
+    else
+      for {
+        resp   <- client.url(url).withMethod("GET").stream()
+        _      =  logger.info(s"downloading $url")
+        result <- if (resp.status == 200)
+                    resp
+                      .bodyAsSource
+                      .runWith(FileIO.toPath(outputFile.toPath))
+                      // only return file if sha1 is valid
+                      .map(_ => resp.header("X-Checksum-Sha1")
+                                    .filter(sha1 => Hashing.validateFileSha1(sha1, outputFile))
+                                    .map(_       => outputFile))
+                  else {
+                    logger.info(s"failed to download $url - ${resp.status}")
+                    Future.successful(None)
+                  }
+      } yield result
   }
 
-  def listFailed(): Map[String, String] = failedDownloads.toMap
+  def listFailed(): Map[String, String] =
+    failedDownloads.toMap
 
   def listAvailable(): Seq[File] =
     config
       .cacheDir
       .toFile
-      .listFiles(new FilenameFilter {override def accept(file: File, name: String): Boolean = name.startsWith("assets-frontend-") && name.endsWith(".zip")}).toSeq
+      .listFiles(new FilenameFilter { override def accept(file: File, name: String): Boolean = name.startsWith("assets-frontend-") && name.endsWith(".zip") })
+      .toSeq
       .filter(_.isFile)
 
-  def uninstall(): Future[Unit] = {
+  def uninstall(): Future[Unit] =
     cache.removeAll().map(_ =>
-    listAvailable()
-      .foreach(file => {
-        logger.info(s"Deleting ${file.getPath}")
-        file.delete()
-      })
+      listAvailable()
+        .foreach { file =>
+          logger.info(s"Deleting ${file.getPath}")
+          file.delete()
+        }
     )
-  }
-
 }
-

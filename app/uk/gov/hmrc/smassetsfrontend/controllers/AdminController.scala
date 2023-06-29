@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 HM Revenue & Customs
+ * Copyright 2023 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,17 +27,21 @@ import scala.concurrent.ExecutionContext
 
 class AdminController @Inject() (
   assetCacheService: AssetCacheService,
-  config:AppConfig,
-  mcc: MessagesControllerComponents
-)(implicit ec: ExecutionContext) extends FrontendController(mcc){
+  config           : AppConfig,
+  mcc              : MessagesControllerComponents
+)(implicit
+  ec: ExecutionContext
+) extends FrontendController(mcc) {
 
-  def installed(): Action[AnyContent] = Action { _ =>
-    val available = assetCacheService.listAvailable()
-    val failed    = assetCacheService.listFailed()
-    Ok(Installed(config, available, failed))
-  }
+  def installed(): Action[AnyContent] =
+    Action {
+      val available = assetCacheService.listAvailable()
+      val failed    = assetCacheService.listFailed()
+      Ok(Installed(config, available, failed))
+    }
 
-  def uninstall(): Action[AnyContent] = Action.async { implicit request =>  {
-    assetCacheService.uninstall().map(_ => Ok("Cache Cleared"))
-  }}
+  def uninstall(): Action[AnyContent] =
+    Action.async(
+      assetCacheService.uninstall().map(_ => Ok("Cache Cleared"))
+    )
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 HM Revenue & Customs
+ * Copyright 2023 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,23 +28,27 @@ import scala.concurrent.ExecutionContext
 @Singleton
 class AssetsController @Inject()(
   cacheService: AssetCacheService,
-  cc:           ControllerComponents
-)(implicit ec: ExecutionContext) extends AbstractController(cc){
+  cc          :  ControllerComponents
+)(implicit
+  ec          : ExecutionContext
+) extends AbstractController(cc) {
 
-  private val mimeTypes = StaticFileMimeTypes.fileMimeTypes().asScala()
+  private val mimeTypes = StaticFileMimeTypes.fileMimeTypes().asScala
 
-  def assets(version: String, path: String): Action[AnyContent] =  Action.async { implicit request =>
-      for {
-        zf     <- cacheService.getAsset(version)
-        result =  zf.fold(NotFound(s"Invalid version $version"))(zipFile =>
-                    Option(zipFile.getEntry(path))
-                      .fold(NotFound(s"Invalid file $path"))(zipEntry => {
-                        val content = StreamConverters.fromInputStream(() => zipFile.getInputStream(zipEntry))
-                        val mineType = Some(mimeTypes.forFileName(path).getOrElse("application/octet-stream"))
-                        Result(header = ResponseHeader(200, Map("Cache-Control" -> "max-age=680000, immutable")), body = HttpEntity.Streamed(content, None, mineType))
-                      }))
-      } yield result
+  def assets(version: String, path: String): Action[AnyContent] = Action.async {
+    for {
+      zf     <- cacheService.getAsset(version)
+      result =  zf.fold(NotFound(s"Invalid version $version"))(zipFile =>
+                  Option(zipFile.getEntry(path))
+                    .fold(NotFound(s"Invalid file $path")){ zipEntry =>
+                      val content  = StreamConverters.fromInputStream(() => zipFile.getInputStream(zipEntry))
+                      val mineType = Some(mimeTypes.forFileName(path).getOrElse("application/octet-stream"))
+                      Result(
+                        header = ResponseHeader(200, Map("Cache-Control" -> "max-age=680000, immutable")),
+                        body   = HttpEntity.Streamed(content, None, mineType)
+                      )
+                    }
+                )
+    } yield result
   }
-
-
 }
