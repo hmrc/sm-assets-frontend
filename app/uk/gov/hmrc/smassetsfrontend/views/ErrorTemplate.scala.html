@@ -1,5 +1,5 @@
 @*
- * Copyright 2022 HM Revenue & Customs
+ * Copyright 2023 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,11 +18,13 @@
 
 @this()
 
-@(pageTitle: String, heading: String, message: String)(implicit request: Request[_], messages: Messages)
-    <h1 class="govuk-heading-xl">@{Text(heading).asHtml}</h1>
-    <p class="govuk-body">@{Text(message).asHtml}</p>
+@( pageTitle: String,
+   heading  : String,
+   message  : String
+)(implicit
+  request   : RequestHeader,
+  messages  : Messages
+)
 
-
-@{
-    //$COVERAGE-OFF$
-}
+<h1 class="govuk-heading-xl">@{Text(heading).asHtml}</h1>
+<p class="govuk-body">@{Text(message).asHtml}</p>

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 HM Revenue & Customs
+ * Copyright 2023 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,11 +23,11 @@ object Hashing {
 
   def validateFileSha1(sha1Sum: String, file: File): Boolean = {
     val digest = MessageDigest.getInstance("SHA-1")
-    val fis = new FileInputStream(file)
-    val dis = new DigestInputStream(fis, digest)
+    val fis    = new FileInputStream(file)
+    val dis    = new DigestInputStream(fis, digest)
 
     val buffer = new Array[Byte](4096)
-    while(dis.available() > 0){
+    while (dis.available() > 0) {
       dis.read(buffer)
     }
     val fileSha1 = digest.digest.map(b => String.format("%02x", Byte.box(b))).mkString
