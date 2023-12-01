@@ -29,8 +29,6 @@ class AppConfig @Inject()(config: Configuration) {
   val workDir: String         = config.get[String]("workdir")
 
   val cacheDir: Path = Paths.get(workDir, "assets-cache")
-  if(!cacheDir.toFile.exists()) {
+  if (!cacheDir.toFile.exists())
     cacheDir.toFile.mkdir()
-  }
-
 }

@@ -5,5 +5,3 @@ GET        /admin/installed           uk.gov.hmrc.smassetsfrontend.controllers.A
 DELETE     /admin/installed           uk.gov.hmrc.smassetsfrontend.controllers.AdminController.uninstall()
 
 ->         /                          health.Routes
-
-GET        /admin/metrics             com.kenshoo.play.metrics.MetricsController.metrics

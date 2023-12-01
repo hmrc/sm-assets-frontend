@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.smassetsfrontend.controllers
 
-import akka.stream.scaladsl.StreamConverters
+import org.apache.pekko.stream.scaladsl.StreamConverters
 import play.api.http.HttpEntity
 import play.api.mvc._
 import play.mvc.StaticFileMimeTypes
@@ -28,7 +28,7 @@ import scala.concurrent.ExecutionContext
 @Singleton
 class AssetsController @Inject()(
   cacheService: AssetCacheService,
-  cc          :  ControllerComponents
+  cc          : ControllerComponents
 )(implicit
   ec          : ExecutionContext
 ) extends AbstractController(cc) {

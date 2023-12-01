@@ -16,8 +16,8 @@
 
 package uk.gov.hmrc.smassetsfrontend.services
 
-import akka.stream.Materializer
-import akka.stream.scaladsl.FileIO
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.scaladsl.FileIO
 import play.api.Logger
 import play.api.cache.AsyncCacheApi
 import play.api.libs.ws.WSClient
@@ -95,7 +95,10 @@ class AssetCacheService @Inject()(
     config
       .cacheDir
       .toFile
-      .listFiles(new FilenameFilter { override def accept(file: File, name: String): Boolean = name.startsWith("assets-frontend-") && name.endsWith(".zip") })
+      .listFiles(new FilenameFilter {
+        override def accept(file: File, name: String): Boolean =
+          name.startsWith("assets-frontend-") && name.endsWith(".zip")
+      })
       .toSeq
       .filter(_.isFile)
 
