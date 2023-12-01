@@ -16,8 +16,8 @@
 
 package uk.gov.hmrc.smassetsfrontend.services
 
-import akka.stream.Materializer
-import akka.stream.scaladsl.FileIO
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.scaladsl.FileIO
 import play.api.Logger
 import play.api.cache.AsyncCacheApi
 import play.api.libs.ws.WSClient
@@ -64,7 +64,7 @@ class AssetCacheService @Inject()(
   }
 
   private def download(version: String, outputFile: File): Future[Option[File]] = {
-    val url = s"https://${config.artifactoryUrl}${config.artifactoryPath}$version/assets-frontend-$version.zip"
+    val url = s"${config.artifactoryUrl}${config.artifactoryPath}$version/assets-frontend-$version.zip"
 
     // abort early if we've already tried the url and it didnt work
     if (failedDownloads.contains(url))
@@ -78,9 +78,11 @@ class AssetCacheService @Inject()(
                       .bodyAsSource
                       .runWith(FileIO.toPath(outputFile.toPath))
                       // only return file if sha1 is valid
-                      .map(_ => resp.header("X-Checksum-Sha1")
-                                    .filter(sha1 => Hashing.validateFileSha1(sha1, outputFile))
-                                    .map(_       => outputFile))
+                      .map(_ =>
+                        resp.header("X-Checksum-Sha1")
+                            .filter(_.equalsIgnoreCase(Hashing.sha1(outputFile)))
+                            .map(_ => outputFile)
+                      )
                   else {
                     logger.info(s"failed to download $url - ${resp.status}")
                     Future.successful(None)
@@ -95,7 +97,10 @@ class AssetCacheService @Inject()(
     config
       .cacheDir
       .toFile
-      .listFiles(new FilenameFilter { override def accept(file: File, name: String): Boolean = name.startsWith("assets-frontend-") && name.endsWith(".zip") })
+      .listFiles(new FilenameFilter {
+        override def accept(file: File, name: String): Boolean =
+          name.startsWith("assets-frontend-") && name.endsWith(".zip")
+      })
       .toSeq
       .filter(_.isFile)
 

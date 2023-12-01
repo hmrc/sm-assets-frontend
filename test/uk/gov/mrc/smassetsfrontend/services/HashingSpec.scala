@@ -14,11 +14,25 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.smassetsfrontend
+package uk.gov.hmrc.smassetsfrontend.services
 
+import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
-class AssetsFrontendIntegrationSpec extends AnyWordSpec {
+import java.io.{File, FileWriter}
 
+class HashingSpec extends AnyWordSpec with Matchers {
 
+  "sha1" should {
+    "calculate the SHA-1 hash of a file's content" in {
+      val tmpFile = File.createTempFile("hashingspec", ".test")
+      tmpFile.deleteOnExit()
+
+      val fw = new FileWriter(tmpFile)
+      fw.write("TEST_DATA")
+      fw.close()
+
+      Hashing.sha1(tmpFile).toLowerCase shouldBe "e88dfe5ea9ab61ad9ffe368a3c699c6c1b1e20a0"
+    }
+  }
 }
