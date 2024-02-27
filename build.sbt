@@ -18,5 +18,5 @@ lazy val microservice = Project("sm-assets-frontend", file("."))
 lazy val it = project
   .enablePlugins(PlayScala)
   .dependsOn(microservice % "test->test")
-  .settings(DefaultBuildSettings.itSettings)
+  .settings(DefaultBuildSettings.itSettings(forkJvmPerTest = true))
   .settings(libraryDependencies ++= AppDependencies.it)
