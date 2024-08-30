@@ -25,6 +25,7 @@ import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.ws.WSClient
+import play.api.libs.ws.WSBodyReadables.readableAsString
 import uk.gov.hmrc.http.test.WireMockSupport
 import uk.gov.hmrc.smassetsfrontend.services.Hashing
 
@@ -34,7 +35,7 @@ class AssetsFrontendIntegrationSpec
      with ScalaFutures
      with IntegrationPatience
      with GuiceOneServerPerSuite
-     with WireMockSupport {
+     with WireMockSupport:
 
   val cacheDir = java.nio.file.Files.createTempDirectory("assets-frontend-cache-dir")
 
@@ -49,8 +50,8 @@ class AssetsFrontendIntegrationSpec
 
   val wsClient = app.injector.instanceOf[WSClient]
 
-  "Requesting asset" should {
-    "return asset" in {
+  "Requesting asset" should:
+    "return asset" in:
       val assetVersion = "1.0.0"
       val assetFile    = s"assets-frontend-$assetVersion.zip"
 
@@ -64,19 +65,15 @@ class AssetsFrontendIntegrationSpec
           )
       )
 
-      def testDownload(): Unit = {
+      def testDownload(): Unit =
         val response = wsClient.url(resource(s"assets/$assetVersion/file1.txt")).get().futureValue
         response.status shouldBe 200
         response.body shouldBe "FILE_CONTENT\n"
-      }
 
       testDownload()
       testDownload() // second time should be cached
 
       verify(1, getRequestedFor(urlEqualTo(s"/path/$assetVersion/$assetFile")))
-    }
-  }
 
   def resource(path: String): String =
     s"http://localhost:$port/$path"
-}

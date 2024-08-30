@@ -29,19 +29,16 @@ class AdminController @Inject() (
   assetCacheService: AssetCacheService,
   config           : AppConfig,
   mcc              : MessagesControllerComponents
-)(implicit
+)(using
   ec: ExecutionContext
-) extends FrontendController(mcc) {
+) extends FrontendController(mcc):
 
   def installed(): Action[AnyContent] =
-    Action {
+    Action:
       val available = assetCacheService.listAvailable()
       val failed    = assetCacheService.listFailed()
       Ok(Installed(config, available, failed))
-    }
 
   def uninstall(): Action[AnyContent] =
-    Action.async(
+    Action.async:
       assetCacheService.uninstall().map(_ => Ok("Cache Cleared"))
-    )
-}

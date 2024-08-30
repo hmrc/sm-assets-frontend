@@ -29,26 +29,23 @@ import scala.concurrent.ExecutionContext
 class AssetsController @Inject()(
   cacheService: AssetCacheService,
   cc          : ControllerComponents
-)(implicit
+)(using
   ec          : ExecutionContext
-) extends AbstractController(cc) {
+) extends AbstractController(cc):
 
   private val mimeTypes = StaticFileMimeTypes.fileMimeTypes().asScala
 
-  def assets(version: String, path: String): Action[AnyContent] = Action.async {
-    for {
-      zf     <- cacheService.getAsset(version)
-      result =  zf.fold(NotFound(s"Invalid version $version"))(zipFile =>
-                  Option(zipFile.getEntry(path))
-                    .fold(NotFound(s"Invalid file $path")){ zipEntry =>
-                      val content  = StreamConverters.fromInputStream(() => zipFile.getInputStream(zipEntry))
-                      val mineType = Some(mimeTypes.forFileName(path).getOrElse("application/octet-stream"))
-                      Result(
-                        header = ResponseHeader(200, Map("Cache-Control" -> "max-age=680000, immutable")),
-                        body   = HttpEntity.Streamed(content, None, mineType)
-                      )
-                    }
-                )
-    } yield result
-  }
-}
+  def assets(version: String, path: String): Action[AnyContent] =
+    Action.async:
+      for
+        zf     <- cacheService.getAsset(version)
+        result =  zf.fold(NotFound(s"Invalid version $version")): zipFile =>
+                    Option(zipFile.getEntry(path))
+                      .fold(NotFound(s"Invalid file $path")): zipEntry =>
+                        val content  = StreamConverters.fromInputStream(() => zipFile.getInputStream(zipEntry))
+                        val mineType = Some(mimeTypes.forFileName(path).getOrElse("application/octet-stream"))
+                        Result(
+                          header = ResponseHeader(200, Map("Cache-Control" -> "max-age=680000, immutable")),
+                          body   = HttpEntity.Streamed(content, None, mineType)
+                        )
+      yield result

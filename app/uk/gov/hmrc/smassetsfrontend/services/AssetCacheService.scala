@@ -35,10 +35,10 @@ class AssetCacheService @Inject()(
   client: WSClient,
   config: AppConfig,
   cache : AsyncCacheApi
-)(implicit
-  ec    : ExecutionContext,
-  mat   : Materializer
-) {
+)(using
+  ExecutionContext,
+  Materializer
+):
   private val logger = Logger(this.getClass)
 
   private val failedDownloads = mutable.Map[String, String]()
@@ -46,49 +46,49 @@ class AssetCacheService @Inject()(
   def getAsset(version:String): Future[Option[ZipFile]] =
     cache.getOrElseUpdate(version)(downloadIfMissing(version))
 
-  private def downloadIfMissing(version: String): Future[Option[ZipFile]] = {
+  private def downloadIfMissing(version: String): Future[Option[ZipFile]] =
     val assetFile = config.cacheDir.resolve(s"assets-frontend-$version.zip").toFile
 
-    if (assetFile.exists())
-      Future.successful(Some(new ZipFile(assetFile)))
-    else {
+    if assetFile.exists()
+    then
+      Future.successful(Some(ZipFile(assetFile)))
+    else
       logger.info(s"version $version not found locally, downloading")
       val tmpFile = File.createTempFile("assets-frontend", "zip")
 
-      for {
+      for
         downloadedFile <- download(version, tmpFile).recover { case _: Exception => None }
         outFile        =  downloadedFile.map(file => Files.move(file.toPath, assetFile.toPath, StandardCopyOption.REPLACE_EXISTING).toFile)
-        zipFile        =  outFile.map(new ZipFile(_))
-      } yield zipFile
-    }
-  }
+        zipFile        =  outFile.map(ZipFile(_))
+      yield zipFile
 
-  private def download(version: String, outputFile: File): Future[Option[File]] = {
+  private def download(version: String, outputFile: File): Future[Option[File]] =
     val url = s"${config.artifactoryUrl}${config.artifactoryPath}$version/assets-frontend-$version.zip"
 
     // abort early if we've already tried the url and it didnt work
-    if (failedDownloads.contains(url))
+    if failedDownloads.contains(url)
+    then
       Future.successful(None)
     else
-      for {
+      for
         resp   <- client.url(url).withMethod("GET").stream()
         _      =  logger.info(s"downloading $url")
-        result <- if (resp.status == 200)
+        result <-
+                  if resp.status == 200
+                  then
                     resp
                       .bodyAsSource
                       .runWith(FileIO.toPath(outputFile.toPath))
                       // only return file if sha1 is valid
-                      .map(_ =>
-                        resp.header("X-Checksum-Sha1")
-                            .filter(_.equalsIgnoreCase(Hashing.sha1(outputFile)))
-                            .map(_ => outputFile)
-                      )
-                  else {
+                      .map: _ =>
+                        resp
+                          .header("X-Checksum-Sha1")
+                          .filter(_.equalsIgnoreCase(Hashing.sha1(outputFile)))
+                          .map(_ => outputFile)
+                  else
                     logger.info(s"failed to download $url - ${resp.status}")
                     Future.successful(None)
-                  }
-      } yield result
-  }
+      yield result
 
   def listFailed(): Map[String, String] =
     failedDownloads.toMap
@@ -105,11 +105,10 @@ class AssetCacheService @Inject()(
       .filter(_.isFile)
 
   def uninstall(): Future[Unit] =
-    cache.removeAll().map(_ =>
-      listAvailable()
-        .foreach { file =>
-          logger.info(s"Deleting ${file.getPath}")
-          file.delete()
-        }
-    )
-}
+    cache
+      .removeAll()
+      .map: _ =>
+        listAvailable()
+          .foreach: file =>
+            logger.info(s"Deleting ${file.getPath}")
+            file.delete()
