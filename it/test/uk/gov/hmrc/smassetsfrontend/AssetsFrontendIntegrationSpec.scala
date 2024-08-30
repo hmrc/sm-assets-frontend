@@ -25,6 +25,7 @@ import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.ws.WSClient
+import play.api.libs.ws.WSBodyReadables.readableAsString
 import uk.gov.hmrc.http.test.WireMockSupport
 import uk.gov.hmrc.smassetsfrontend.services.Hashing
 
