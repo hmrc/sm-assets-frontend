@@ -19,24 +19,20 @@ package uk.gov.hmrc.smassetsfrontend.services
 import java.io.{File, FileInputStream, InputStream}
 import java.security.{DigestInputStream, MessageDigest}
 
-object Hashing {
+object Hashing:
   private val digest = MessageDigest.getInstance("SHA-1")
 
   def sha1(file: File): String =
-    sha1(new FileInputStream(file))
+    sha1(FileInputStream(file))
 
-  def sha1(is: InputStream): String = {
-    val dis = new DigestInputStream(is, digest)
+  def sha1(is: InputStream): String =
+    val dis = DigestInputStream(is, digest)
 
-    try {
+    try
       val buffer = new Array[Byte](4096)
-      while (dis.available() > 0) {
+      while (dis.available() > 0)
         dis.read(buffer)
-      }
-    } finally {
+    finally
       dis.close()
-    }
 
     digest.digest.map(b => String.format("%02x", Byte.box(b))).mkString
-  }
-}
