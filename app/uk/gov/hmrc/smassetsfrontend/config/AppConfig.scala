@@ -24,9 +24,9 @@ import java.nio.file.{Path, Paths}
 @Singleton
 class AppConfig @Inject()(config: Configuration):
 
-  val artifactoryUrl: String  = config.get[String]("artifactory.url")
+  val artifactoryUrl : String = config.get[String]("artifactory.url")
   val artifactoryPath: String = config.get[String]("artifactory.path")
-  val workDir: String         = config.get[String]("workdir")
+  val workDir        : String = config.get[String]("workdir")
 
   val cacheDir: Path = Paths.get(workDir, "assets-cache")
   if !cacheDir.toFile.exists()
