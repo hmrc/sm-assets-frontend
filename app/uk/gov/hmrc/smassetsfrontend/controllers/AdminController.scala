@@ -35,10 +35,13 @@ class AdminController @Inject() (
 
   def installed(): Action[AnyContent] =
     Action:
-      val available = assetCacheService.listAvailable()
-      val failed    = assetCacheService.listFailed()
-      Ok(Installed(config, available, failed))
+      Ok(Installed(
+        config          = config,
+        filenames       = assetCacheService.listAvailable(),
+        failedDownloads = assetCacheService.listFailed()
+      ))
 
   def uninstall(): Action[AnyContent] =
     Action.async:
-      assetCacheService.uninstall().map(_ => Ok("Cache Cleared"))
+      assetCacheService.uninstall()
+        .map(_ => Ok("Cache Cleared"))
